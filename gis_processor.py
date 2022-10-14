@@ -118,7 +118,10 @@ if __name__ == "__main__":
 
     elif command == "g-json":
         av_db_file_path = input("Enter full path to av.db file: ")
-        generate_gis_info(av_db_file_path)
+        if Path(av_db_file_path).exists():
+            generate_gis_info(av_db_file_path)
+        else:
+            print("The specified database file does not exist.")
     
     elif command == "--help":
         help_message = (
