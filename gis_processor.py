@@ -38,6 +38,7 @@ def get_files_by_template_id(template_id, cursor):
 def find_aux_files(file, cursor):
     aux_files = []
     files_by_template_id = get_files_by_template_id(file[1], cursor)
+    
     for possible_aux_file in files_by_template_id:
         file_as_path = Path(possible_aux_file[FILENAME])
         main_file_path = Path(file[FILENAME])
