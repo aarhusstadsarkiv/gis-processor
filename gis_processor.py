@@ -73,7 +73,7 @@ def move_files(aux_files_map, root_dir):
                 log_file.write("Moved file {} to folder {}\n".format(str(absolute_file_path), str(destination)))
                 
             else:
-                log_file.write(f"File already moved: docCollection{aux_file[1]}/{aux_file[0]}/{aux_file[2]}")
+                log_file.write(f"File already moved: docCollection{aux_file[1]}/{aux_file[0]}/{aux_file[2]}\n")
 
 
            
@@ -120,6 +120,7 @@ if __name__ == "__main__":
         av_db_file_path = input("Enter full path to av.db file: ")
         if Path(av_db_file_path).exists():
             generate_gis_info(av_db_file_path)
+            print("Generated gis_info.json file.")
         else:
             print("The specified database file does not exist.")
     
