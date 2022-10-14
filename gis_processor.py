@@ -147,11 +147,11 @@ if __name__ == "__main__":
     elif command == "--help":
         print_help()
         
-    
     elif command == None:
         av_db_file_path = input("Enter full path to av.db file: ")
         print("Parsing av_db file for gis projects...")
         aux_files_map = run_generate_gis_info(av_db_file_path)
+        
         if aux_files_map is None:
             print("Could not generate gis info.")
         else:
