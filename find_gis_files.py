@@ -70,30 +70,38 @@ def move_files(aux_files_map, root_dir):
             if absolute_file_path.exists():
                 shutil.move(absolute_file_path, destination)
                 _place_template(absolute_file_path.parent, relative_destination)
+                log_file.write("Moved file {} to folder {}\n".format(str(absolute_file_path), str(destination)))
                 
             else:
                 log_file.write(f"File already moved: docCollection{aux_file[1]}/{aux_file[0]}/{aux_file[2]}")
 
 
-            # log_file.write("Moving file {} to folder {}\n".format(str(absolute_file_path), str(destination)))
+           
     log_file.close()
+
+def generate_gis_info(av_db_file_path: str):
+    main_files = find_main_files(av_db_file_path)
+    print(f"Found {len(main_files)} main files.")
+    aux_files_map = {}
+    connection = sqlite3.connect(av_db_file_path)
+    cursor = connection.cursor()
+    for file in main_files:
+        aux_files = find_aux_files(file, cursor)
+        key = f"{file[DOC_COLLECTION_ID]};{file[FILE_ID]}"
+        aux_files_map[key] = aux_files
+
+    connection.close()
+    output_file = Path(av_db_file_path) / "gis_info.json"
+    with open (output_file, "w", encoding="utf-8") as file_handle:
+        json.dump(aux_files_map, file_handle, indent=4, ensure_ascii=False)
+    
+    return aux_files_map
 
 if __name__ == "__main__":
     command = None
     
-    command = sys.argv[1]
-    # db_file_path = "/mnt/e/Staging/Processing/AVID.AARS.80.1/_metadata/AVID.AARS.80.av_with_index.db"
-
-    # main_files = find_main_files(db_file_path)
-    # print(f"Found main files: {len(main_files)}")
-    #aux_files_map = {}
-
-    # connection = sqlite3.connect(db_file_path)
-    # cursor = connection.cursor()
-    #for file in main_files:
-        # aux_files = find_aux_files(file, cursor)
-        # key = f"{file[DOC_COLLECTION_ID]};{file[FILE_ID]}"
-        # aux_files_map[key] = aux_files
+    if(len(sys.argv) > 1):
+        command = sys.argv[1]
     
     if command == "move":
         json_file = input("Enter full path to json file: ")
@@ -107,10 +115,20 @@ if __name__ == "__main__":
         move_files(aux_files_map, root_dir_path)
 
         print("Finished moving the gis files.")
+
+    elif command == "g-json":
+        av_db_file_path = input("Enter full path to av.db file: ")
+        generate_gis_info(av_db_file_path)
     
-    # connection.close()
-    # output_file = "/mnt/e/Staging/Processing/AVID.AARS.80.1/_metadata/gis_info.json"
-    # with open (output_file, "w", encoding="utf8") as file_handle:
-        # json.dump(aux_files_map, file_handle, indent=4, ensure_ascii=False)
+    elif command == None:
+        av_db_file_path = input("Enter full path to av.db file: ")
+        print("Parsing av_db file for gis projects...")
+        aux_files_map = generate_gis_info(av_db_file_path)
+        root_dir = input("Enter full path to root folder (OriginalFiles): ")
+        root_dir_path = Path(root_dir)
+        move_files(aux_files_map, root_dir_path)
+        print("Finished moving the gis files.")
+
+        
 
     
