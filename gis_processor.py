@@ -120,6 +120,14 @@ if __name__ == "__main__":
         av_db_file_path = input("Enter full path to av.db file: ")
         generate_gis_info(av_db_file_path)
     
+    elif command == "--help":
+        help_message = """Invoke the tool by running python gis_processor.py with the commands\n
+                            * g-json. Generate the gis_info.json file.\n
+                            * move. Move files according to the gis_info.json file.\n
+                            Running the script with no commands defaults to g-json followed by move
+                        """
+        print(help_message)
+    
     elif command == None:
         av_db_file_path = input("Enter full path to av.db file: ")
         print("Parsing av_db file for gis projects...")
@@ -129,6 +137,5 @@ if __name__ == "__main__":
         move_files(aux_files_map, root_dir_path)
         print("Finished moving the gis files.")
 
-        
-
-    
+    else:
+        print("Invalid arguments. Run python gis_processor.py --help for help.")
