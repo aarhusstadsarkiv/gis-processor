@@ -91,7 +91,7 @@ def generate_gis_info(av_db_file_path: str):
         aux_files_map[key] = aux_files
 
     connection.close()
-    output_file = Path(av_db_file_path) / "gis_info.json"
+    output_file = Path(av_db_file_path).parent / "gis_info.json"
     with open (output_file, "w", encoding="utf-8") as file_handle:
         json.dump(aux_files_map, file_handle, indent=4, ensure_ascii=False)
     
