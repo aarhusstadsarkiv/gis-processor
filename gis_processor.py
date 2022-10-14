@@ -90,6 +90,7 @@ def generate_gis_info(av_db_file_path: str):
     
     for file in main_files:
         aux_files = find_aux_files(file, cursor)
+        # The keys of the aux_files_map are of the form "docCollectionID;fileID"
         key = f"{file[DOC_COLLECTION_ID]};{file[FILE_ID]}"
         aux_files_map[key] = aux_files
 
@@ -151,7 +152,7 @@ if __name__ == "__main__":
         av_db_file_path = input("Enter full path to av.db file: ")
         print("Parsing av_db file for gis projects...")
         aux_files_map = run_generate_gis_info(av_db_file_path)
-        
+
         if aux_files_map is None:
             print("Could not generate gis info.")
         else:
