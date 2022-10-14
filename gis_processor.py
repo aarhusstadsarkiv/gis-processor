@@ -52,7 +52,7 @@ def _place_template(folder_path, moved_to_folder):
         file_handle.write(template_content)
 
 def move_files(aux_files_map, root_dir):
-    log_file_path = root_dir / "log_file.txt"
+    log_file_path = root_dir / "_metadata" / "gis_processor_log_file.txt"
     log_file = open(log_file_path, "w", encoding="utf-8")
     
     for master_file_folder in aux_files_map:
