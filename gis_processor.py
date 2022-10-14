@@ -121,11 +121,13 @@ if __name__ == "__main__":
         generate_gis_info(av_db_file_path)
     
     elif command == "--help":
-        help_message = """Invoke the tool by running python gis_processor.py with the commands\n
-                            * g-json. Generate the gis_info.json file.\n
-                            * move. Move files according to the gis_info.json file.\n
-                            Running the script with no commands defaults to g-json followed by move
-                        """
+        help_message = (
+
+                        "Invoke the tool by running python gis_processor.py with the commands\n"
+                        "   * g-json. Generate the gis_info.json file.\n"
+                        "   * move. Move files according to the gis_info.json file.\n"
+                        "Running the script with no commands defaults to g-json followed by move"
+                    )
         print(help_message)
     
     elif command == None:
