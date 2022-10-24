@@ -135,7 +135,7 @@ if __name__ == "__main__":
         with open(json_file, "r", encoding="utf-8") as f:
             aux_files_map = json.load(f)
         
-        root_dir = input("Enter full path to root folder (OriginalFiles): ")
+        root_dir = input("Enter full path to root folder (OriginalFiles or OriginalDocuments): ")
         root_dir_path = Path(root_dir)
         
         move_files(aux_files_map, root_dir_path)
