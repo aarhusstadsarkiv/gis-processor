@@ -7,7 +7,7 @@ Invoke the tool by running `python gis_processor.py` with the following commands
 * `move` Move files according to the gis_info.json file.
 Running the script with no commands defaults to `g-json` followed by `move`
 
-The gis_info.json file is placed in the same folder as the av_db file.
+The generates a gis_info.json file which is placed in the same folder as the av_db file.
 A gis log file is placed in the _metadata folder of the root data directory 
 (usually the OriginalFiles or OriginalDocuments folder).
 
