@@ -14,4 +14,4 @@ A gis log file is placed in the _metadata folder of the root data directory
 # Dependencies
 This tool only uses the standard library shipped with Python 3.
 The only dependecy that needs to be installed in order to run the tool
-is thus an up to date version of Python 3.
+is an up to date version of Python 3.
