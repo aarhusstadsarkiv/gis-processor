@@ -101,7 +101,7 @@ AUX_EXTENSIONS = [
     ".prj",
     ".PRJ",
     ".mid",
-    ".MID",      
+    ".MID",
     ".sbn",
     ".SBN",
     ".sbx",
@@ -122,5 +122,4 @@ AUX_EXTENSIONS = [
     ".XML",
     ".cpg",
     ".CPG",
-    
 ]
