@@ -1,12 +1,10 @@
 # from logging import root
 # from re import template
-import sqlite3
 from pathlib import Path
 import json
 import shutil
 import sys
 
-from gis_processor.utils import MAIN_EXTENSIONS
 from gis_processor.utils import EXTENSION_MAPPING
 from gis_processor.files_db_gis import GisDB
 
@@ -20,14 +18,24 @@ DOC_COLLECTION_ID = 4
 
 
 
-def find_aux_files(file, db_conn: GisDB):
+def find_aux_files(main_file, db_conn: GisDB):
+    """Finds the aux. files related to the main file supplied
+
+    Args:
+        file (_type_): The file to find aux. files for
+        db_conn (GisDB): Connection to the av.db
+
+    Returns:
+        _type_: List of aux files
+    """
     aux_files = []
-    files_by_template_id = db_conn.get_files_by_template_id(file[1])
+    files_by_template_id = db_conn.get_files_by_template_id(main_file[1])
 
     for possible_aux_file in files_by_template_id:
         file_as_path = Path(possible_aux_file[FILENAME])
-        main_file_path = Path(file[FILENAME])
-        # If the files have the same stem and possible_aux_file has a suffix in the aux suffix list for the main file format.
+        main_file_path = Path(main_file[FILENAME])
+        # If the files have the same stem and possible_aux_file has a suffix in 
+        # the aux suffix list for the main file format, then we add it to aux_files.
         if (
             file_as_path.stem == main_file_path.stem
             and file_as_path.suffix in EXTENSION_MAPPING[main_file_path.suffix]
@@ -90,7 +98,15 @@ def move_files(aux_files_map, root_dir):
     log_file.close()
 
 
-def generate_gis_info(av_db_file_path: str):
+def generate_gis_info(av_db_file_path: str) -> dict:
+    """Generates GIS info for the files and dumps it as a .json file and returns it as a dict. 
+
+    Args:
+        av_db_file_path (str): The path to the av.db
+
+    Returns:
+        dict: GIS info
+    """
     db_conn = GisDB(av_db_file_path)
     main_files = db_conn.get_main_gis_files()
     print(f"Found {len(main_files)} main files.")
@@ -98,12 +114,11 @@ def generate_gis_info(av_db_file_path: str):
     aux_files_map = {}
 
     for file in main_files:
-        aux_files = find_aux_files(file, cursor)
+        aux_files = find_aux_files(file)
         # The keys of the aux_files_map are of the form "docCollectionID;fileID"
         key = f"{file[DOC_COLLECTION_ID]};{file[FILE_ID]}"
         aux_files_map[key] = aux_files
 
-    connection.close()
     output_file = Path(av_db_file_path).parent / "gis_info.json"
     with open(output_file, "w", encoding="utf-8") as file_handle:
         json.dump(aux_files_map, file_handle, indent=4, ensure_ascii=False)
