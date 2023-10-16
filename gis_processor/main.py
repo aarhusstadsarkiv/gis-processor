@@ -8,6 +8,7 @@ import sys
 
 from gis_processor.utils import MAIN_EXTENSIONS
 from gis_processor.utils import EXTENSION_MAPPING
+from gis_processor.files_db_gis import GisDB
 
 # Indexes for a row in the fil table of an av.db file.
 FILE_ID = 0
@@ -17,31 +18,11 @@ FILENAME = 3
 DOC_COLLECTION_ID = 4
 
 
-def find_main_files(av_db_file_path):
-    connection = sqlite3.connect(av_db_file_path)
-    cursor = connection.cursor()
-    main_files = []
-
-    for extention in MAIN_EXTENSIONS:
-        result = cursor.execute(f"SELECT * FROM fil WHERE filename LIKE '%{extention}'")
-        rows = result.fetchall()
-        main_files.extend(rows)
-
-    connection.close()
-    return main_files
 
 
-def get_files_by_template_id(template_id, cursor):
-    result = cursor.execute(
-        f"SELECT * FROM fil WHERE notes_template_id = {template_id}"
-    )
-    rows = result.fetchall()
-    return rows
-
-
-def find_aux_files(file, cursor):
+def find_aux_files(file, db_conn: GisDB):
     aux_files = []
-    files_by_template_id = get_files_by_template_id(file[1], cursor)
+    files_by_template_id = db_conn.get_files_by_template_id(file[1])
 
     for possible_aux_file in files_by_template_id:
         file_as_path = Path(possible_aux_file[FILENAME])
@@ -110,12 +91,11 @@ def move_files(aux_files_map, root_dir):
 
 
 def generate_gis_info(av_db_file_path: str):
-    main_files = find_main_files(av_db_file_path)
+    db_conn = GisDB(av_db_file_path)
+    main_files = db_conn.get_main_gis_files()
     print(f"Found {len(main_files)} main files.")
 
     aux_files_map = {}
-    connection = sqlite3.connect(av_db_file_path)
-    cursor = connection.cursor()
 
     for file in main_files:
         aux_files = find_aux_files(file, cursor)
