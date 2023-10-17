@@ -20,8 +20,7 @@ class GisDB(FileDB):
         main_files = []
 
         for extention in MAIN_EXTENSIONS:
-            result = self.execute(
-                f"SELECT * FROM fil WHERE filename LIKE '%{extention}'"
+            result = self.files.select(where=f"filename LIKE '%{extention}'"
             ).fetchall()
             main_files.extend(result)
 
@@ -36,8 +35,8 @@ class GisDB(FileDB):
         Returns:
             _type_: The rows where the template ID is the same
         """
-        result = self.execute(
-            f"SELECT * FROM fil WHERE notes_template_id = {template_id}"
+        result = self.files.select(
+            where=f"notes_template_id = {template_id}"
         )
         rows = result.fetchall()
         return rows
