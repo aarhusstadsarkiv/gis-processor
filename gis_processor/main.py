@@ -80,18 +80,22 @@ class GisProcessor:
             folder_info: list[str] = master_file_folder.split(";")
 
             # relative_destination is the last part of the destination (i.e. destination relative to root_dir).
-            relative_destination: str = f"docCollection{folder_info[0]}/{folder_info[1]}"
+            relative_destination: Path = Path(f"docCollection{folder_info[0]}") / folder_info[1]
             destination: Path = root_dir / relative_destination
 
             # Each aux_file is a triplet (docCollectionID, docID, filename)
             for aux_file in aux_files_map[master_file_folder]:
-                absolute_file_path: Path = root_dir / (f"docCollection{aux_file[1]}") / aux_file[0] / aux_file[2]
+                relative_path: Path = Path((f"docCollection{aux_file[1]}") / aux_file[0] / aux_file[2])
+                absolute_file_path: Path = root_dir / relative_path
                 if absolute_file_path.exists():
                     shutil.move(absolute_file_path, destination)
                     self._place_template(absolute_file_path.parent, relative_destination)
                     log_file.write(
                         f"Moved file {absolute_file_path!s} to folder {destination!s}\n",
                     )
+                    new_rel_path_for_aux_file: Path = relative_destination / aux_file[2]
+                    # Where we update the newly moved file in the files.db
+                    self.file_db.update_rel_path(new_rel_path=new_rel_path_for_aux_file, old_rel_path=relative_path)
 
                 else:
                     log_file.write(
