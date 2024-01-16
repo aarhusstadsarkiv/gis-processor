@@ -11,9 +11,10 @@ class GisAVDB:
 
     def __init__(
         self,
-        database: Union[str, bytes, PathLike[str], PathLike[bytes]],
+        database: Union[str, PathLike[str]],
     ) -> None:
-        self.connection: sqlite3.Connection = sqlite3.connect(database=database)
+        db_path = Path(database)
+        self.connection: sqlite3.Connection = sqlite3.connect(database=db_path)
         self.cursor: sqlite3.Cursor = self.connection.cursor()
         self.path: Path = Path(database)
 
@@ -26,8 +27,12 @@ class GisAVDB:
         main_files: list = []
 
         for extention in MAIN_EXTENSIONS:
-            result = self.files.select(
-                where=f"filename LIKE '%{extention}'",
+            result = self.cursor.execute(
+                f"""
+            SELECT *
+            FROM fil
+            WHERE filename LIKE '%{extention}'
+            """,
             ).fetchall()
             main_files.extend(result)
 

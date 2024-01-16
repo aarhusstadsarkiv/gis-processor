@@ -21,10 +21,10 @@ DOC_COLLECTION_ID = 4
 
 class GisProcessor:
     """Class for handling methods related to GIS-processing."""
+
     def __init__(self, av_db_path: Union[Path, None] = None, file_db_path: Union[Path, None] = None) -> None:
         self.av_db: Union[GisAVDB, None] = GisAVDB(av_db_path) if av_db_path else None
         self.file_db: Union[GisFilesDB, None] = GisFilesDB(file_db_path) if file_db_path else None
-
 
     def find_aux_files(self, main_file: list):
         """Finds the aux. files related to the main file supplied.
@@ -56,13 +56,11 @@ class GisProcessor:
                 )
         return aux_files
 
-
     def _place_template(self, folder_path: Path, moved_to_folder: PathLike):
         template_file_path = folder_path / "template.txt"
         with open(template_file_path, "w") as file_handle:
             template_content = f"This file was part of a gis project.\n It was moved to: {moved_to_folder}"
             file_handle.write(template_content)
-
 
     def move_files(self, aux_files_map: dict[str, list[list[str]]], root_dir: Path):
         """_summary_.
@@ -72,20 +70,22 @@ class GisProcessor:
             root_dir (Path): _description_
         """
         log_file_path: Path = root_dir / "_metadata" / "gis_processor_log_file.txt"
-        log_file = open(log_file_path, "w", encoding="utf-8")
+        log_file = open(log_file_path, "w", encoding="utf-8")  # noqa: SIM115
 
         for master_file_folder in aux_files_map:
             # The folder consists of docCollectionID;docID.
             # so we split it on ";" to get the elements.
             folder_info: list[str] = master_file_folder.split(";")
 
-            # relative_destination is the last part of the destination (i.e. destination relative to root_dir).
-            relative_destination: Path = Path(f"docCollection{folder_info[0]}") / folder_info[1]
+            # relative_destination is the last part of the destination (i.e. destination relative to root_dir)
+            relative_destination: Path = Path(f"docCollection{folder_info[0]}") / Path(folder_info[1])
             destination: Path = root_dir / relative_destination
 
             # Each aux_file is a triplet (docCollectionID, docID, filename)
             for aux_file in aux_files_map[master_file_folder]:
-                relative_path: Path = Path((f"docCollection{aux_file[1]}") / aux_file[0] / aux_file[2])
+                relative_path: Path = Path(
+                    (f"docCollection{aux_file[1]}") / Path(aux_file[0]) / Path(aux_file[2]),
+                )
                 absolute_file_path: Path = root_dir / relative_path
                 if absolute_file_path.exists():
                     shutil.move(absolute_file_path, destination)
@@ -93,9 +93,11 @@ class GisProcessor:
                     log_file.write(
                         f"Moved file {absolute_file_path!s} to folder {destination!s}\n",
                     )
-                    new_rel_path_for_aux_file: Path = relative_destination / aux_file[2]
-                    # Where we update the newly moved file in the files.db
-                    self.file_db.update_rel_path(new_rel_path=new_rel_path_for_aux_file, old_rel_path=relative_path)
+                    new_rel_path_for_aux_file: Path = relative_destination / Path(aux_file[2])
+                    # Then we update the newly moved file in the files.db
+                    self.file_db.update_rel_path(
+                        new_rel_path=new_rel_path_for_aux_file, old_rel_path=relative_path,
+                    )
 
                 else:
                     log_file.write(
@@ -103,7 +105,6 @@ class GisProcessor:
                     )
 
         log_file.close()
-
 
     def generate_gis_info(self) -> dict:
         """Generates GIS info for the files and dumps it as a .json file and returns it as a dict.
@@ -162,16 +163,16 @@ def main():
     if command == "move":
         json_file = input("Enter full path to json file: ")
 
-        processor = GisProcessor()
-
         aux_files_map = None
         with open(json_file, encoding="utf-8") as f:
             aux_files_map = json.load(f)
 
-        root_dir = input("Enter full path to root folder (OriginalFiles or OriginalDocuments): ")
-        root_dir_path = Path(root_dir)
+        root_dir: Path = Path(input("Enter full path to root folder (OriginalFiles or OriginalDocuments): "))
+        files_db_path: Path = Path(input("Enter full path to files.db file: "))
 
-        processor.move_files(aux_files_map, root_dir_path)
+        processor = GisProcessor(file_db_path=files_db_path)
+
+        processor.move_files(aux_files_map, root_dir)
         print("Finished moving the gis files.")
 
     elif command == "g-json":
@@ -189,8 +190,8 @@ def main():
         av_db_file_path: str = input("Enter full path to av.db file: ")
         files_db_path: str = input("Enter full path to files.db file: ")
         print("Parsing av_db file for gis projects...")
-        processor = GisProcessor(av_db_file_path, files_db_path)
-        aux_files_map = processor.run_generate_gis_info(av_db_file_path)
+        processor = GisProcessor(av_db_path=av_db_file_path, file_db_path=files_db_path)
+        aux_files_map: dict = processor.generate_gis_info()
 
         if aux_files_map is None:
             print("Could not generate gis info.")
