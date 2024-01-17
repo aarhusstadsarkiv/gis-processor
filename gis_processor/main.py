@@ -96,7 +96,8 @@ class GisProcessor:
                     new_rel_path_for_aux_file: Path = relative_destination / Path(aux_file[2])
                     # Then we update the newly moved file in the files.db
                     self.file_db.update_rel_path(
-                        new_rel_path=new_rel_path_for_aux_file, old_rel_path=relative_path,
+                        new_rel_path=new_rel_path_for_aux_file,
+                        old_rel_path=relative_path,
                     )
 
                 else:
@@ -196,8 +197,7 @@ def main():
         if aux_files_map is None:
             print("Could not generate gis info.")
         else:
-            root_dir = input("Enter full path to root folder (OriginalFiles): ")
-            root_dir_path = Path(root_dir)
+            root_dir_path: Path = Path(files_db_path).parent.parent
 
             processor.move_files(aux_files_map, root_dir_path)
             print("Finished moving the gis files.")

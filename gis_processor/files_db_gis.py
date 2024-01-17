@@ -1,5 +1,4 @@
 from datetime import datetime
-from os import PathLike
 from pathlib import Path
 from typing import Union
 from uuid import UUID
@@ -10,10 +9,6 @@ from acacore.models.file import File
 
 class GisFilesDB(FileDB):
     """Class for interacting with the `files.db` database, inherits form acacore `FileDB`."""
-
-    def __init__(self, database: Union[str, bytes, PathLike[str], PathLike[bytes]]) -> None:
-        db_path = Path(database)
-        super().__init__(database=db_path)
 
     def update_rel_path(
         self,
@@ -49,13 +44,25 @@ class GisFilesDB(FileDB):
             )
 
         # 2: Update the relative path of the file to the new relative path
-        file.relative_path = new_rel_path
-        self.files.insert(file, replace=True)
+        self.execute(
+            """
+        UPDATE Files
+        SET relative_path = ?
+        WHERE uuid == ?;
+        """,
+            [str(new_rel_path), str(file.uuid)],
+        )
         # 3: Make a history entry
         self.add_history(
             uuid=file.uuid,
             operation="gis_processor:move",
-            data=None,
-            reason="GIS processing and rearranging",
+            data={
+                "update_path_to": new_rel_path,
+                "old_path_was": old_rel_path,
+                "put_in_template_at_old_path": "Yes",
+            },
+            reason="Moving all files related to the same gis project together",
             time=datetime.now(),  # noqa: DTZ005
         )
+        # 4: We commit the changes to the database
+        self.commit()
