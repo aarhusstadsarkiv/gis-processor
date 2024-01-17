@@ -57,7 +57,7 @@ class GisProcessor:
         return aux_files
 
     def _place_template(self, folder_path: Path, moved_to_folder: PathLike):
-        template_file_path = folder_path / "template.txt"
+        template_file_path = folder_path / "__file_moved__.txt"
         with open(template_file_path, "w") as file_handle:
             template_content = f"This file was part of a gis project.\n It was moved to: {moved_to_folder}"
             file_handle.write(template_content)
