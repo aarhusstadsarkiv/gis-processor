@@ -56,11 +56,20 @@ class GisProcessor:
                 )
         return aux_files
 
-    def _place_template(self, folder_path: Path, moved_to_folder: PathLike):
+    def _place_template(self, folder_path: Path, moved_to_folder: PathLike, root_dir: Path):
+        """Places a template in the specified folder, and makes a call to the database to register it.
+
+        Args:
+            folder_path (Path): Path where the template should be placed.
+            moved_to_folder (PathLike): The path where the file which was moved was moved to.
+            root_dir (Path): The root dir of the whole convertool project.
+        """
         template_file_path = folder_path / "__file_moved__.txt"
         with open(template_file_path, "w") as file_handle:
             template_content = f"This file was part of a gis project.\n It was moved to: {moved_to_folder}"
             file_handle.write(template_content)
+        rel_path_to_template = template_file_path.relative_to(root_dir)
+        self.file_db.add_template(rel_path=rel_path_to_template, full_path=template_file_path)
 
     def move_files(self, aux_files_map: dict[str, list[list[str]]], root_dir: Path):
         """_summary_.
@@ -89,7 +98,7 @@ class GisProcessor:
                 absolute_file_path: Path = root_dir / relative_path
                 if absolute_file_path.exists():
                     shutil.move(absolute_file_path, destination)
-                    self._place_template(absolute_file_path.parent, relative_destination)
+                    self._place_template(folder_path=absolute_file_path.parent, moved_to_folder=relative_destination, root_dir=root_dir)
                     log_file.write(
                         f"Moved file {absolute_file_path!s} to folder {destination!s}\n",
                     )

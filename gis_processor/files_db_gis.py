@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 from uuid import UUID
+import simple_file_checksum
 
 from acacore.database.files_db import FileDB
 from acacore.models.file import File
@@ -65,4 +66,31 @@ class GisFilesDB(FileDB):
             time=datetime.now(),  # noqa: DTZ005
         )
         # 4: We commit the changes to the database
+        self.commit()
+
+    def add_template(self, rel_path: Path, full_path: Path):
+        file = File(
+            checksum=simple_file_checksum.get_checksum(full_path, algorithm="SHA256"), # This could probably be hardcoded  # noqa: E501
+            puid="x-fmt/111",
+            relative_path=rel_path,
+            is_binary=False,
+            size=full_path.stat().st_size,
+            signature="Plain Text File",
+            warning=None,
+            action="convert",
+            action_data={
+                "convert": [
+                    {"converter": "copy", "converter_type": "master", "outputs": ["txt"]},
+                    {"converter": "text", "converter_type": "statutory", "outputs": ["tif"]},
+                ],
+                "extract": None,
+                "replace": None,
+                "manual": None,
+                "rename": None,
+                "ignore": None,
+                "reidentify": None,
+            },
+            processed=False,
+        )
+        self.files.insert(entry=file)
         self.commit()
