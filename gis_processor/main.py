@@ -68,8 +68,7 @@ class GisProcessor:
         with open(template_file_path, "w") as file_handle:
             template_content = f"This file was part of a gis project.\n It was moved to: {moved_to_folder}"
             file_handle.write(template_content)
-        rel_path_to_template = template_file_path.relative_to(root_dir)
-        self.file_db.add_template(rel_path=rel_path_to_template, full_path=template_file_path)
+        self.file_db.add_template(full_path=template_file_path, root_path=root_dir)
 
     def move_files(self, aux_files_map: dict[str, list[list[str]]], root_dir: Path):
         """_summary_.

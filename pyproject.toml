@@ -10,7 +10,6 @@ python = "^3.9"
 acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git"}
 click = "^8.1.7"
 acautils = {git = "https://github.com/aarhusstadsarkiv/acautils.git"}
-simple-file-checksum = "^1.2.2"
 
 [tool.poetry.scripts]
 gisprocessor = "gis_processor.main:main"
