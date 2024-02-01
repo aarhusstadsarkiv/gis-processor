@@ -4,8 +4,8 @@ from typing import Union
 from uuid import UUID
 
 from acacore.database.files_db import FileDB
-from acacore.models.file import File
-from acacore.models.file_data import ActionData, ConvertAction
+from acacore.models.file import ActionData, File
+from acacore.models.reference_files import ConvertAction
 
 
 class GisFilesDB(FileDB):
