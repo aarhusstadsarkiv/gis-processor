@@ -1,12 +1,14 @@
 # from logging import root
 # from re import template
-import sqlite3
-from pathlib import Path
 import json
 import shutil
 import sys
+from os import PathLike
+from pathlib import Path
+from typing import Union
 
-from gis_processor.utils import MAIN_EXTENSIONS
+from gis_processor.av_db_gis import GisAVDB
+from gis_processor.files_db_gis import GisFilesDB
 from gis_processor.utils import EXTENSION_MAPPING
 
 # Indexes for a row in the fil table of an av.db file.
@@ -17,118 +19,129 @@ FILENAME = 3
 DOC_COLLECTION_ID = 4
 
 
-def find_main_files(av_db_file_path):
-    connection = sqlite3.connect(av_db_file_path)
-    cursor = connection.cursor()
-    main_files = []
+class GisProcessor:
+    """Class for handling methods related to GIS-processing."""
 
-    for extention in MAIN_EXTENSIONS:
-        result = cursor.execute(f"SELECT * FROM fil WHERE filename LIKE '%{extention}'")
-        rows = result.fetchall()
-        main_files.extend(rows)
+    def __init__(self, av_db_path: Union[Path, None] = None, file_db_path: Union[Path, None] = None) -> None:
+        self.av_db: Union[GisAVDB, None] = GisAVDB(av_db_path) if av_db_path else None
+        self.file_db: Union[GisFilesDB, None] = GisFilesDB(file_db_path) if file_db_path else None
 
-    connection.close()
-    return main_files
+    def find_aux_files(self, main_file: list):
+        """Finds the aux. files related to the main file supplied.
 
+        Args:
+            main_file (_type_): The file to find aux. files for
 
-def get_files_by_template_id(template_id, cursor):
-    result = cursor.execute(
-        f"SELECT * FROM fil WHERE notes_template_id = {template_id}"
-    )
-    rows = result.fetchall()
-    return rows
+        Returns:
+            _type_: List of aux files
+        """
+        aux_files = []
+        files_by_template_id = self.av_db.get_files_by_template_id(main_file[1])
 
-
-def find_aux_files(file, cursor):
-    aux_files = []
-    files_by_template_id = get_files_by_template_id(file[1], cursor)
-
-    for possible_aux_file in files_by_template_id:
-        file_as_path = Path(possible_aux_file[FILENAME])
-        main_file_path = Path(file[FILENAME])
-        # If the files have the same stem and possible_aux_file has a suffix in the aux suffix list for the main file format.
-        if (
-            file_as_path.stem == main_file_path.stem
-            and file_as_path.suffix in EXTENSION_MAPPING[main_file_path.suffix]
-        ):
-            aux_files.append(
-                (
-                    possible_aux_file[FILE_ID],
-                    possible_aux_file[DOC_COLLECTION_ID],
-                    possible_aux_file[FILENAME],
+        for possible_aux_file in files_by_template_id:
+            file_as_path = Path(possible_aux_file[FILENAME])
+            main_file_path = Path(main_file[FILENAME])
+            # If the files have the same stem and possible_aux_file has a suffix in
+            # the aux suffix list for the main file format, then we add it to aux_files.
+            if (
+                file_as_path.stem == main_file_path.stem
+                and file_as_path.suffix in EXTENSION_MAPPING[main_file_path.suffix]
+            ):
+                aux_files.append(
+                    (
+                        possible_aux_file[FILE_ID],
+                        possible_aux_file[DOC_COLLECTION_ID],
+                        possible_aux_file[FILENAME],
+                    ),
                 )
-            )
-    return aux_files
+        return aux_files
 
+    def _place_template(self, folder_path: Path, moved_to_folder: PathLike, root_dir: Path):
+        """Places a template in the specified folder, and makes a call to the database to register it.
 
-def _place_template(folder_path, moved_to_folder):
-    template_file_path = folder_path / "template.txt"
-    with open(template_file_path, "w") as file_handle:
-        template_content = (
-            "This file was part of a gis project.\n It was moved to: {}".format(
-                moved_to_folder
-            )
-        )
-        file_handle.write(template_content)
+        Args:
+            folder_path (Path): Path where the template should be placed.
+            moved_to_folder (PathLike): The path where the file which was moved was moved to.
+            root_dir (Path): The root dir of the whole convertool project.
+        """
+        template_file_path = folder_path / "__file_moved__.txt"
+        with open(template_file_path, "w") as file_handle:
+            template_content = f"This file was part of a gis project.\n It was moved to: {moved_to_folder}"
+            file_handle.write(template_content)
+        self.file_db.add_template(full_path=template_file_path, root_path=root_dir)
 
+    def move_files(self, aux_files_map: dict[str, list[list[str]]], root_dir: Path):
+        """_summary_.
 
-def move_files(aux_files_map, root_dir):
-    log_file_path = root_dir / "_metadata" / "gis_processor_log_file.txt"
-    log_file = open(log_file_path, "w", encoding="utf-8")
+        Args:
+            aux_files_map (dict): _description_
+            root_dir (Path): _description_
+        """
+        log_file_path: Path = root_dir / "_metadata" / "gis_processor_log_file.txt"
+        log_file = open(log_file_path, "w", encoding="utf-8")  # noqa: SIM115
 
-    for master_file_folder in aux_files_map:
-        # The folder consists of docCollectionID;docID.
-        # so we split it on ";" to get the elements.
-        folder_info = master_file_folder.split(";")
+        for master_file_folder in aux_files_map:
+            # The folder consists of docCollectionID;docID.
+            # so we split it on ";" to get the elements.
+            folder_info: list[str] = master_file_folder.split(";")
 
-        # relative_destination is the last part of the destination (i.e. destination relative to root_dir).
-        relative_destination = "docCollection{}/{}".format(
-            folder_info[0], folder_info[1]
-        )
-        destination = root_dir / relative_destination
+            # relative_destination is the last part of the destination (i.e. destination relative to root_dir)
+            relative_destination: Path = Path(f"docCollection{folder_info[0]}") / Path(folder_info[1])
+            destination: Path = root_dir / relative_destination
 
-        # Each aux_file is a triplet (docCollectionID, docID, filename)
-        for aux_file in aux_files_map[master_file_folder]:
-            absolute_file_path: Path = (
-                root_dir / (f"docCollection{aux_file[1]}") / aux_file[0] / aux_file[2]
-            )
-            if absolute_file_path.exists():
-                shutil.move(absolute_file_path, destination)
-                _place_template(absolute_file_path.parent, relative_destination)
-                log_file.write(
-                    "Moved file {} to folder {}\n".format(
-                        str(absolute_file_path), str(destination)
+            # Each aux_file is a triplet (docCollectionID, docID, filename)
+            for aux_file in aux_files_map[master_file_folder]:
+                relative_path: Path = Path(
+                    (f"docCollection{aux_file[1]}") / Path(aux_file[0]) / Path(aux_file[2]),
+                )
+                absolute_file_path: Path = root_dir / relative_path
+                if absolute_file_path.exists():
+                    shutil.move(absolute_file_path, destination)
+                    self._place_template(folder_path=absolute_file_path.parent, moved_to_folder=relative_destination, root_dir=root_dir)
+                    log_file.write(
+                        f"Moved file {absolute_file_path!s} to folder {destination!s}\n",
                     )
-                )
+                    new_rel_path_for_aux_file: Path = relative_destination / Path(aux_file[2])
+                    # Then we update the newly moved file in the files.db
+                    self.file_db.update_rel_path(
+                        new_rel_path=new_rel_path_for_aux_file,
+                        old_rel_path=relative_path,
+                    )
 
-            else:
-                log_file.write(
-                    f"File already moved: docCollection{aux_file[1]}/{aux_file[0]}/{aux_file[2]}\n"
-                )
+                else:
+                    log_file.write(
+                        f"File already moved: docCollection{aux_file[1]}/{aux_file[0]}/{aux_file[2]}\n",
+                    )
 
-    log_file.close()
+        log_file.close()
 
+    def generate_gis_info(self) -> dict:
+        """Generates GIS info for the files and dumps it as a .json file and returns it as a dict.
 
-def generate_gis_info(av_db_file_path: str):
-    main_files = find_main_files(av_db_file_path)
-    print(f"Found {len(main_files)} main files.")
+        Returns:
+            dict: Dictionary of GIS info
+        """
+        main_files: list = self.av_db.get_main_gis_files()
+        print(f"Found {len(main_files)} main files.")
 
-    aux_files_map = {}
-    connection = sqlite3.connect(av_db_file_path)
-    cursor = connection.cursor()
+        aux_files_map: dict = {}
 
-    for file in main_files:
-        aux_files = find_aux_files(file, cursor)
-        # The keys of the aux_files_map are of the form "docCollectionID;fileID"
-        key = f"{file[DOC_COLLECTION_ID]};{file[FILE_ID]}"
-        aux_files_map[key] = aux_files
+        for file in main_files:
+            aux_files = self.find_aux_files(main_file=file)
+            # The keys of the aux_files_map are of the form "docCollectionID;fileID"
+            key = f"{file[DOC_COLLECTION_ID]};{file[FILE_ID]}"
+            aux_files_map[key] = aux_files
 
-    connection.close()
-    output_file = Path(av_db_file_path).parent / "gis_info.json"
-    with open(output_file, "w", encoding="utf-8") as file_handle:
-        json.dump(aux_files_map, file_handle, indent=4, ensure_ascii=False)
+        output_file = Path(self.av_db.path).parent / "gis_info.json"
+        with open(output_file, "w", encoding="utf-8") as file_handle:
+            json.dump(aux_files_map, file_handle, indent=4, ensure_ascii=False)
 
-    return aux_files_map
+        return aux_files_map
+
+    def run_generate_gis_info(self):
+        if self.av_db is None:
+            print("Error: The path to the av.db was not correct. Please verify.")
+        self.generate_gis_info()
 
 
 def print_help():
@@ -150,16 +163,6 @@ def print_version() -> None:
     print(version)
 
 
-def run_generate_gis_info(av_db_file_path):
-    if Path(av_db_file_path).exists():
-        aux_files_map = generate_gis_info(av_db_file_path)
-        print("Generated gis_info.json file.")
-        return aux_files_map
-    else:
-        print(f"The specified database file does not exist: {av_db_file_path}")
-        return None
-
-
 def main():
     command = None
 
@@ -170,20 +173,21 @@ def main():
         json_file = input("Enter full path to json file: ")
 
         aux_files_map = None
-        with open(json_file, "r", encoding="utf-8") as f:
+        with open(json_file, encoding="utf-8") as f:
             aux_files_map = json.load(f)
 
-        root_dir = input(
-            "Enter full path to root folder (OriginalFiles or OriginalDocuments): "
-        )
-        root_dir_path = Path(root_dir)
+        root_dir: Path = Path(input("Enter full path to root folder (OriginalFiles or OriginalDocuments): "))
+        files_db_path: Path = Path(input("Enter full path to files.db file: "))
 
-        move_files(aux_files_map, root_dir_path)
+        processor = GisProcessor(file_db_path=files_db_path)
+
+        processor.move_files(aux_files_map, root_dir)
         print("Finished moving the gis files.")
 
     elif command == "g-json":
         av_db_file_path = input("Enter full path to av.db file: ")
-        run_generate_gis_info(av_db_file_path)
+        processor = GisProcessor(av_db_path=av_db_file_path)
+        processor.run_generate_gis_info()
 
     elif command == "--version":
         print_version()
@@ -192,17 +196,18 @@ def main():
         print_help()
 
     elif command is None:
-        av_db_file_path = input("Enter full path to av.db file: ")
+        av_db_file_path: str = input("Enter full path to av.db file: ")
+        files_db_path: str = input("Enter full path to files.db file: ")
         print("Parsing av_db file for gis projects...")
-        aux_files_map = run_generate_gis_info(av_db_file_path)
+        processor = GisProcessor(av_db_path=av_db_file_path, file_db_path=files_db_path)
+        aux_files_map: dict = processor.generate_gis_info()
 
         if aux_files_map is None:
             print("Could not generate gis info.")
         else:
-            root_dir = input("Enter full path to root folder (OriginalFiles): ")
-            root_dir_path = Path(root_dir)
+            root_dir_path: Path = Path(files_db_path).parent.parent
 
-            move_files(aux_files_map, root_dir_path)
+            processor.move_files(aux_files_map, root_dir_path)
             print("Finished moving the gis files.")
 
     else:
