@@ -7,17 +7,17 @@ include = ["pyproject.toml"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git"}
-click = "^8.1.7"
-acautils = {git = "https://github.com/aarhusstadsarkiv/acautils.git"}
+acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v1.2.0"}
 
 [tool.poetry.scripts]
 gisprocessor = "gis_processor.main:main"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.12.1"
-ruff = "^0.1.11"
-mypy = "^1.8.0"
+pytest = "^8.2.1"
+black = "^24.4.2"
+ruff = "^0.4.6"
+coverage = "^7.5.3"
+types-click = "^7.1.8"
 
 [tool.black]
 line-length = 110
