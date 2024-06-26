@@ -117,13 +117,13 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                     aux_files: list[tuple[File, File]] = []
 
                     for aux_file_orig in processor.find_auxiliary_files(main_file_orig):
-                        aux_file: File | None = get_file(db, processor.file_to_path(aux_file_orig))
+                        aux_file: File | None = get_file(db, p := processor.file_to_path(aux_file_orig))
 
                         if not aux_file:
                             file_not_found_error(ctx, "aux", p, None).log(ERROR, logger)
                             aux_files = []
                             break
-                        elif (p := aux_file.get_absolute_path(root)).exists():
+                        elif not (p := aux_file.get_absolute_path(root)).exists():
                             file_not_found_error(ctx, "aux", p, aux_file.uuid).log(ERROR, logger)
                             aux_files = []
                             break
