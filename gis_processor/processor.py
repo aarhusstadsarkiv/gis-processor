@@ -79,7 +79,7 @@ class CiriusNotesProcessor(Processor):
     def file_to_path(self, file: dict[str, Any]) -> str | PathLike:
         doc_collection: int = int(file["doc_collection_id"])
         file_id: int = int(file["fil_id"])
-        return Path(str(doc_collection), str(file_id), file["filename"])
+        return Path(f"docCollection{doc_collection}", str(file_id), file["filename"])
 
     def find_main_files(self) -> Generator[dict[str, Any], None, None]:
         where: str = " or ".join(f"filename like '%' || ?" for _ in self.main_extensions)
