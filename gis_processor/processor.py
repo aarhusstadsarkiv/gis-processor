@@ -92,7 +92,7 @@ class CiriusNotesProcessor(Processor):
     def find_auxiliary_files(self, main_file: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
         cursor: Cursor = self.conn.cursor()
         cursor.execute(
-            "select * from file where notes_template_id = ?",
+            "select * from fil where notes_template_id = ?",
             [main_file["notes_template_id"]],
         )
         cursor.row_factory = Row
