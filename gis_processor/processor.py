@@ -73,7 +73,7 @@ class CiriusNotesProcessor(Processor):
         tables: list[str] = [
             n.lower() for [n] in connection.execute("select name from sqlite_master where type = 'table'")
         ]
-        if all(t in cls._tables for t in tables):
+        if all(t in tables for t in cls._tables):
             return True
 
     def file_to_path(self, file: dict[str, Any]) -> str | PathLike:
