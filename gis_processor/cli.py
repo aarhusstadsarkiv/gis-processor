@@ -142,7 +142,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
                         aux_file.action = "template"
                         aux_file.action_data = ActionData(
-                            template=ReplaceAction(template="text", template_text=f"Moved to {new_path}")
+                            replace=ReplaceAction(template="text", template_text=f"Moved to {new_path}")
                         )
 
                         aux_file_copy: File
