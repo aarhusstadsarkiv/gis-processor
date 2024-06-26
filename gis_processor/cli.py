@@ -14,7 +14,7 @@ from acacore.__version__ import __version__ as __acacore_version__
 from acacore.database import FileDB
 from acacore.models.file import File
 from acacore.models.history import HistoryEntry
-from acacore.models.reference_files import IgnoreAction
+from acacore.models.reference_files import ActionData, ReplaceAction
 from acacore.utils.helpers import ExceptionManager
 from acacore.utils.log import setup_logger
 from click import argument
@@ -139,9 +139,11 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         if aux_file.action == "ignore":
                             continue
 
-                        aux_file.action = "ignore"
-                        aux_file.action_data = IgnoreAction(reason="Auxiliary file")
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
+                        aux_file.action = "template"
+                        aux_file.action_data = ActionData(
+                            template=ReplaceAction(template="text", template_text=f"Moved to {new_path}")
+                        )
 
                         aux_file_copy: File
 
