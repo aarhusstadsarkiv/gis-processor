@@ -82,11 +82,9 @@ class CiriusNotesProcessor(Processor):
         return Path(str(doc_collection), str(file_id), file["filename"])
 
     def find_main_files(self) -> Generator[dict[str, Any], None, None]:
+        where: str = " or ".join(f"filename like '%' || ?" for _ in self.main_extensions)
         cursor: Cursor = self.conn.cursor()
-        cursor.execute(
-            f'select * from fil where {" or ".join(f"filename like '%' || ?" for _ in self.main_extensions)}',
-            self.main_extensions,
-        )
+        cursor.execute(f"select * from fil where {where}", self.main_extensions)
         cursor.row_factory = Row
         yield from (dict(f) for f in cursor)
         cursor.close()
@@ -102,8 +100,7 @@ class CiriusNotesProcessor(Processor):
             dict(f)
             for f in cursor.fetchall()
             if Path(f["filename"]).stem == Path(main_file["filename"]).stem
-            and Path(f["filename"]).suffix.lower()
-            in self._aux_extensions[Path(main_file["filename"]).suffix.lower()]
+            and Path(f["filename"]).suffix.lower() in self._aux_extensions[Path(main_file["filename"]).suffix.lower()]
         )
         cursor.close()
 
