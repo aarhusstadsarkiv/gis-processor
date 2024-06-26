@@ -14,7 +14,7 @@ from acacore.__version__ import __version__ as __acacore_version__
 from acacore.database import FileDB
 from acacore.models.file import File
 from acacore.models.history import HistoryEntry
-from acacore.models.reference_files import ActionData, ReplaceAction
+from acacore.models.reference_files import ReplaceAction
 from acacore.models.reference_files import IgnoreAction
 from acacore.utils.helpers import ExceptionManager
 from acacore.utils.log import setup_logger
