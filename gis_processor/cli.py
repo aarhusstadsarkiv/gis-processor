@@ -74,7 +74,7 @@ def file_not_found_error(
 def get_file(db: FileDB, path: str | PathLike) -> File | None:
     return db.files.select(
         where="relative_path = ?",
-        params=[str(Path(path))],
+        parameters=[str(Path(path))],
         limit=1,
     ).fetchone()
 
