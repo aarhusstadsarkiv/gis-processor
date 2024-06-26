@@ -65,7 +65,7 @@ def file_not_found_error(
     path: str | PathLike,
     uuid: UUID | None,
 ) -> HistoryEntry:
-    return HistoryEntry.command_history(ctx, f"file.{file_type}:error", uuid, None, f"{path} not in database")
+    return HistoryEntry.command_history(ctx, f"file.{file_type}:error", uuid, None, f"{path} not found")
 
 
 def get_file(db: FileDB, path: str | PathLike) -> File | None:
@@ -108,10 +108,14 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                     main_file: File | None = get_file(db, p := processor.file_to_path(main_file_orig))
 
                     if not main_file:
-                        file_not_found_error(ctx, "main", p, None).log(ERROR, logger)
+                        HistoryEntry.command_history(ctx, f"file.main:error", None, p, "Not in database").log(
+                            ERROR, logger
+                        )
                         continue
-                    elif (p := main_file.get_absolute_path(root)).exists():
-                        file_not_found_error(ctx, "main", p, main_file.uuid).log(ERROR, logger)
+                    elif not (p := main_file.get_absolute_path(root)).exists():
+                        HistoryEntry.command_history(
+                            ctx, f"file.main:error", main_file.uuid, p, "File does not exists"
+                        ).log(ERROR, logger)
                         continue
 
                     aux_files: list[tuple[File, File]] = []
@@ -120,11 +124,15 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         aux_file: File | None = get_file(db, p := processor.file_to_path(aux_file_orig))
 
                         if not aux_file:
-                            file_not_found_error(ctx, "aux", p, None).log(ERROR, logger)
+                            HistoryEntry.command_history(ctx, f"file.aux:error", None, p, "Not in database").log(
+                                ERROR, logger
+                            )
                             aux_files = []
                             break
                         elif not (p := aux_file.get_absolute_path(root)).exists():
-                            file_not_found_error(ctx, "aux", p, aux_file.uuid).log(ERROR, logger)
+                            HistoryEntry.command_history(
+                                ctx, f"file.aux:error", aux_file.uuid, p, "File does not exists"
+                            ).log(ERROR, logger)
                             aux_files = []
                             break
 
