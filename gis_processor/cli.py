@@ -169,10 +169,10 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                             ctx,
                             "file.aux:copy",
                             aux_file_copy.uuid,
-                            [aux_file.relative_path, aux_file_copy.relative_path],
+                            [str(aux_file.relative_path), str(aux_file_copy.relative_path)],
                         )
 
-                        event.log(INFO, logger)
+                        event.log(INFO, logger, main=str(main_file.relative_path))
 
                         if dry_run:
                             continue
