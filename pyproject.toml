@@ -6,8 +6,8 @@ authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 include = ["pyproject.toml"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v1.2.0"}
+python = "^3.11"
+acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", branch = "dev-matca"}
 
 [tool.poetry.scripts]
 gisprocessor = "gis_processor.cli:app"
