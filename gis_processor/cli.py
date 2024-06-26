@@ -141,6 +141,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                             continue
 
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
+                        aux_file.lock = True
                         aux_file.action = "template"
                         aux_file.action_data.replace = ReplaceAction(
                             template="text",
