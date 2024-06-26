@@ -15,6 +15,7 @@ from acacore.database import FileDB
 from acacore.models.file import File
 from acacore.models.history import HistoryEntry
 from acacore.models.reference_files import ActionData, ReplaceAction
+from acacore.models.reference_files import IgnoreAction
 from acacore.utils.helpers import ExceptionManager
 from acacore.utils.log import setup_logger
 from click import argument
@@ -141,8 +142,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
                         aux_file.action = "template"
-                        aux_file.action_data = ActionData(
-                            replace=ReplaceAction(template="text", template_text=f"Moved to {new_path}")
+                        aux_file.action_data.replace = ReplaceAction(
+                            template="text",
+                            template_text=f"Moved to {new_path}",
                         )
 
                         aux_file_copy: File
@@ -164,6 +166,8 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                                 aux_files = []
                                 break
 
+                        aux_file_copy.action = "ignore"
+                        aux_file_copy.action_data.ignore = IgnoreAction(reason="Auxiliary GIS file")
                         aux_files.append((aux_file, aux_file_copy))
 
                     for aux_file, aux_file_copy in aux_files:
