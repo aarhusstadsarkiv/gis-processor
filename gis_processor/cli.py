@@ -1,3 +1,5 @@
+from logging import ERROR
+from logging import INFO
 from logging import Logger
 from os import PathLike
 from pathlib import Path
@@ -32,13 +34,13 @@ def handle_start(ctx: Context, database: FileDB, *loggers: Logger):
     program_start: HistoryEntry = HistoryEntry.command_history(
         ctx,
         "start",
-        data=ctx.params | {"version": __version__, "acacore": __acacore_version__},
+        data={"acacore": __acacore_version__},
+        add_params_to_data=True,
     )
 
     database.history.insert(program_start)
 
-    for logger in loggers:
-        logger.info(program_start.operation)
+    program_start.log(INFO, *loggers)
 
 
 def handle_end(ctx: Context, database: FileDB, exception: ExceptionManager, *loggers: Logger, commit: bool = True):
@@ -49,11 +51,7 @@ def handle_end(ctx: Context, database: FileDB, exception: ExceptionManager, *log
         reason="".join(format_tb(exception.traceback)) if exception.traceback else None,
     )
 
-    for logger in loggers:
-        if exception.exception:
-            logger.error(f"{program_end.operation} {exception.exception!r}")
-        else:
-            logger.info(program_end.operation)
+    program_end.log(ERROR if exception.exception else INFO, *loggers)
 
     if database.is_open:
         database.history.insert(program_end)
@@ -66,9 +64,8 @@ def file_not_found_error(
     file_type: str,
     path: str | PathLike,
     uuid: UUID | None,
-    orig: dict | None,
 ) -> HistoryEntry:
-    return HistoryEntry.command_history(ctx, f"file.{file_type}:error", uuid, orig, f"{path} not in database")
+    return HistoryEntry.command_history(ctx, f"file.{file_type}:error", uuid, None, f"{path} not in database")
 
 
 def get_file(db: FileDB, path: str | PathLike) -> File | None:
@@ -111,12 +108,10 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                     main_file: File | None = get_file(db, p := processor.file_to_path(main_file_orig))
 
                     if not main_file:
-                        error = file_not_found_error(ctx, "main", p, None, main_file_orig)
-                        logger.error(f"{error.operation} {error.reason}")
+                        file_not_found_error(ctx, "main", p, None).log(ERROR, logger)
                         continue
                     elif (p := main_file.get_absolute_path(root)).exists():
-                        error = file_not_found_error(ctx, "main", p, main_file.uuid, None)
-                        logger.error(f"{error.operation} {main_file.uuid} {error.reason}")
+                        file_not_found_error(ctx, "main", p, main_file.uuid).log(ERROR, logger)
                         continue
 
                     aux_files: list[tuple[File, File]] = []
@@ -125,13 +120,11 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         aux_file: File | None = get_file(db, processor.file_to_path(aux_file_orig))
 
                         if not aux_file:
-                            error = file_not_found_error(ctx, "aux", p, None, aux_file_orig)
-                            logger.error(f"{error.operation} {error.reason}")
+                            file_not_found_error(ctx, "aux", p, None).log(ERROR, logger)
                             aux_files = []
                             break
                         elif (p := aux_file.get_absolute_path(root)).exists():
-                            error = file_not_found_error(ctx, "aux", p, aux_file.uuid, None)
-                            logger.error(f"{error.operation} {aux_file.uuid} {error.reason}")
+                            file_not_found_error(ctx, "aux", p, aux_file.uuid).log(ERROR, logger)
                             aux_files = []
                             break
 
@@ -146,28 +139,18 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                         if aux_file_copy_ := get_file(db, new_path):
                             if aux_file_copy_.checksum != aux_file.checksum:
-                                error = HistoryEntry.command_history(
-                                    ctx,
-                                    "file.aux:error",
-                                    None,
-                                    str(p),
-                                    f"{p} already exists with different hash",
-                                )
-                                logger.error(f"{error.operation} {error.reason}")
+                                HistoryEntry.command_history(
+                                    ctx, "file.aux:error", reason=f"{p} already exists with different hash"
+                                ).log(ERROR, logger)
                                 aux_files = []
                                 break
                             aux_file_copy = aux_file_copy_
                         else:
                             aux_file_copy = aux_file.model_copy(update={"uuid": uuid4(), "relative_path": new_path})
                             if (p := aux_file_copy.get_absolute_path(root)).exists():
-                                error = HistoryEntry.command_history(
-                                    ctx,
-                                    "file.aux:error",
-                                    None,
-                                    str(p),
-                                    f"{p} already exists",
+                                HistoryEntry.command_history(ctx, "file.aux:error", reason=f"{p} already exists").log(
+                                    ERROR, logger
                                 )
-                                logger.error(f"{error.operation} {error.reason}")
                                 aux_files = []
                                 break
 
@@ -175,10 +158,13 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                     for aux_file, aux_file_copy in aux_files:
                         event = HistoryEntry.command_history(
-                            ctx, "file.aux:copy", aux_file_copy.uuid, aux_file_copy.relative_path
+                            ctx,
+                            "file.aux:copy",
+                            aux_file_copy.uuid,
+                            [aux_file.relative_path, aux_file_copy.relative_path],
                         )
 
-                        logger.info(f"{event.operation} {event.uuid} {event.data} Copy auxiliary file")
+                        event.log(INFO, logger)
 
                         if dry_run:
                             continue
