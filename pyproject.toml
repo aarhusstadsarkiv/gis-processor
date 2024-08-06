@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gis_processor"
+name = "gis-processor"
 version = "1.0.0"
 description = "Find and gather related gis-files"
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
@@ -10,7 +10,7 @@ python = "^3.11"
 acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", branch = "dev-matca"}
 
 [tool.poetry.scripts]
-gisprocessor = "gis_processor.cli:app"
+gis-processor = "gis_processor.cli:app"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.1"
