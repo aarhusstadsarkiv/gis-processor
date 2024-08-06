@@ -27,6 +27,7 @@ class Processor(ABC):
             ".cpg",
             ".dbf",
             ".fbn",
+            ".fbx",
             ".ixs",
             ".mxs",
             ".prj",
