@@ -1,26 +1,26 @@
 [tool.poetry]
-name = "gis_processor"
-version = "0.1.0"
+name = "gis-processor"
+version = "1.0.0"
 description = "Find and gather related gis-files"
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 include = ["pyproject.toml"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git"}
-click = "^8.1.7"
-acautils = {git = "https://github.com/aarhusstadsarkiv/acautils.git"}
+python = "^3.11"
+acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v2.0.2"}
 
 [tool.poetry.scripts]
-gisprocessor = "gis_processor.main:main"
+gis-processor = "gis_processor.cli:app"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.12.1"
-ruff = "^0.1.11"
-mypy = "^1.8.0"
+pytest = "^8.2.1"
+black = "^24.4.2"
+ruff = "^0.4.6"
+coverage = "^7.5.3"
+types-click = "^7.1.8"
 
 [tool.black]
-line-length = 110
+line-length = 120
 
 [tool.mypy-convertool.'*']
 disallow_untyped_defs = true
