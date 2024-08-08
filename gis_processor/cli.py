@@ -165,6 +165,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                                 break
 
                         aux_file_copy.action = "ignore"
+                        aux_file_copy.action_data.template = None
                         aux_file_copy.action_data.ignore = IgnoreAction(reason="Auxiliary GIS file")
                         aux_files.append((aux_file, aux_file_copy))
 
