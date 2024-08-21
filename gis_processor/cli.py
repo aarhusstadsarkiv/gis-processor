@@ -151,10 +151,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
                         aux_file.lock = True
                         aux_file.action = "ignore"
-                        aux_file.action_data.ignore = IgnoreAction(
-                            template="text",
-                            reason=f"Moved to {new_path}",
-                        )
+                        aux_file.action_data.ignore = IgnoreAction(template="text", reason=f"Moved to {new_path}")
 
                         aux_file_copy: File
 
@@ -176,8 +173,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                                 break
 
                         aux_file_copy.action = "ignore"
-                        aux_file_copy.action_data.template = None
-                        aux_file_copy.action_data.ignore = IgnoreAction(reason="Auxiliary GIS file")
+                        aux_file_copy.action_data.ignore = IgnoreAction(template="temporary-file")
                         aux_files.append((aux_file, aux_file_copy))
 
                     for aux_file, aux_file_copy in aux_files:
