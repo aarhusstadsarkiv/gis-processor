@@ -83,14 +83,14 @@ def get_file(db: FileDB, path: str | PathLike) -> File | None:
 @pass_context
 def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool):
     """Gis-processor copies all auxiliary gis files to the directory of their corresponding mandatory main file.
-    
+
     \b
     ROOT    Path to the root of the relevant documents directory, e.g. 'OriginalDocuments'
     AVID    Path to the '...av.db', e.g. 'AVID.AARS.61.1/_metadata/AVID.AARS.61.av.db'
-    
+
     The 'av.db'-dababase is needed as it contains information on the original relations between the related gis files.
-    
-    The 'action' of the original auxiliary file is set to 'template' as its original presence must be documented. 
+
+    The 'action' of the original auxiliary file is set to 'template' as its original presence must be documented.
 
     The 'action' of the copied auxiliary file is set to 'ignore' as the gis converter handles the files internally.
     """
@@ -150,8 +150,8 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
                         aux_file.lock = True
-                        aux_file.action = "template"
-                        aux_file.action_data.template = IgnoreAction(
+                        aux_file.action = "ignore"
+                        aux_file.action_data.ignore = IgnoreAction(
                             template="text",
                             reason=f"Moved to {new_path}",
                         )
