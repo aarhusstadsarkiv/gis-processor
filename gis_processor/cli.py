@@ -14,7 +14,6 @@ from acacore.__version__ import __version__ as __acacore_version__
 from acacore.database import FileDB
 from acacore.models.file import File
 from acacore.models.history import HistoryEntry
-from acacore.models.reference_files import TemplateAction
 from acacore.models.reference_files import IgnoreAction
 from acacore.utils.helpers import ExceptionManager
 from acacore.utils.log import setup_logger
@@ -54,10 +53,9 @@ def handle_end(ctx: Context, database: FileDB, exception: ExceptionManager, *log
 
     program_end.log(ERROR if exception.exception else INFO, *loggers)
 
-    if database.is_open:
+    if database.is_open and commit:
         database.history.insert(program_end)
-        if commit:
-            database.commit()
+        database.commit()
 
 
 def file_not_found_error(
@@ -153,9 +151,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
                         aux_file.lock = True
                         aux_file.action = "template"
-                        aux_file.action_data.template = TemplateAction(
+                        aux_file.action_data.template = IgnoreAction(
                             template="text",
-                            template_text=f"Moved to {new_path}",
+                            reason=f"Moved to {new_path}",
                         )
 
                         aux_file_copy: File
