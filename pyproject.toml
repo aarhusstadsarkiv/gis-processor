@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "gis-processor"
-version = "1.0.2"
+version = "1.0.3"
 description = "Find and gather related gis-files"
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 include = ["pyproject.toml"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v3.0.5"}
+acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v3.0.6"}
 
 [tool.poetry.scripts]
 gis-processor = "gis_processor.cli:app"
