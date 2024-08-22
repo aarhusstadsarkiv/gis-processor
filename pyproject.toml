@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gis-processor"
-version = "1.0.2"
+version = "1.0.3"
 description = "Find and gather related gis-files"
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 include = ["pyproject.toml"]
