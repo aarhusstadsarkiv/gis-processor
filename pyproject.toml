@@ -7,7 +7,7 @@ include = ["pyproject.toml"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v3.0.6"}
+acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v3.0.7"}
 
 [tool.poetry.scripts]
 gis-processor = "gis_processor.cli:app"
