@@ -155,16 +155,15 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                         aux_file_copy: File
 
-                        if aux_file_copy_ := get_file(db, new_path):
-                            if aux_file_copy_.checksum != aux_file.checksum:
+                        if aux_file_copy := get_file(db, new_path):
+                            if aux_file_copy.checksum != aux_file.checksum:
                                 HistoryEntry.command_history(
                                     ctx, "file.aux:error", reason=f"{p} already exists with different hash"
                                 ).log(ERROR, logger)
                                 aux_files = []
                                 break
-                            aux_file_copy = aux_file_copy_
                         else:
-                            aux_file_copy = aux_file.model_copy(update={"uuid": uuid4(), "relative_path": new_path})
+                            aux_file_copy = aux_file.model_copy(update={"uuid": uuid4(), "relative_path": new_path}, deep=True)
                             if (p := aux_file_copy.get_absolute_path(root)).exists():
                                 HistoryEntry.command_history(ctx, "file.aux:error", reason=f"{p} already exists").log(
                                     ERROR, logger
