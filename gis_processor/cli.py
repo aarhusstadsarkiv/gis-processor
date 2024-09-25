@@ -78,9 +78,6 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
     check_database_version(ctx, ctx_params(ctx)["root"], database_path)
 
-    program_name: str = ctx.find_root().command.name
-    logger: Logger = setup_logger(program_name, files=[database_path.parent / f"{program_name}.log"], streams=[stdout])
-
     with connect(avid) as avid_conn:
         if not (processor_cls := find_processor(avid_conn)):
             raise ValueError(f"{avid!r} is not recognised")
@@ -95,13 +92,13 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                     if not main_file:
                         HistoryEntry.command_history(ctx, f"file.main:error", None, p, "Not in database").log(
-                            ERROR, logger
+                            ERROR, log_stdout
                         )
                         continue
                     elif not (p := main_file.get_absolute_path(root)).exists():
                         HistoryEntry.command_history(
                             ctx, f"file.main:error", main_file.uuid, p, "File does not exists"
-                        ).log(ERROR, logger)
+                        ).log(ERROR, log_stdout)
                         continue
 
                     aux_files: list[tuple[File, File]] = []
@@ -111,14 +108,14 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                         if not aux_file:
                             HistoryEntry.command_history(ctx, f"file.aux:error", None, p, "Not in database").log(
-                                ERROR, logger
+                                ERROR, log_stdout
                             )
                             aux_files = []
                             break
                         elif not (p := aux_file.get_absolute_path(root)).exists():
                             HistoryEntry.command_history(
                                 ctx, f"file.aux:error", aux_file.uuid, p, "File does not exists"
-                            ).log(ERROR, logger)
+                            ).log(ERROR, log_stdout)
                             aux_files = []
                             break
 
@@ -133,7 +130,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                             if aux_file_copy.checksum != aux_file.checksum:
                                 HistoryEntry.command_history(
                                     ctx, "file.aux:error", reason=f"{p} already exists with different hash"
-                                ).log(ERROR, logger)
+                                ).log(ERROR, log_stdout)
                                 aux_files = []
                                 break
                         else:
@@ -143,7 +140,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                             )
                             if (p := aux_file_copy.get_absolute_path(root)).exists():
                                 HistoryEntry.command_history(ctx, "file.aux:error", reason=f"{p} already exists").log(
-                                    ERROR, logger
+                                    ERROR, log_stdout
                                 )
                                 aux_files = []
                                 break
@@ -160,7 +157,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                             [str(aux_file.relative_path), str(aux_file_copy.relative_path)],
                         )
 
-                        event.log(INFO, logger, main=str(main_file.relative_path))
+                        event.log(INFO, log_stdout, main=str(main_file.relative_path))
 
                         if dry_run:
                             continue
