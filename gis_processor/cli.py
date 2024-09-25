@@ -1,11 +1,9 @@
 from logging import ERROR
 from logging import INFO
-from logging import Logger
 from os import PathLike
 from pathlib import Path
 from shutil import copy
 from sqlite3 import connect
-from sys import stdout
 from uuid import UUID
 from uuid import uuid4
 
