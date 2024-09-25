@@ -6,18 +6,21 @@ from pathlib import Path
 from shutil import copy
 from sqlite3 import connect
 from sys import stdout
-from traceback import format_tb
 from uuid import UUID
 from uuid import uuid4
 
-from acacore.__version__ import __version__ as __acacore_version__
 from acacore.database import FileDB
 from acacore.models.file import File
 from acacore.models.history import HistoryEntry
 from acacore.models.reference_files import IgnoreAction
+from acacore.utils.click import check_database_version
+from acacore.utils.click import ctx_params
+from acacore.utils.click import end_program
+from acacore.utils.click import start_program
 from acacore.utils.helpers import ExceptionManager
 from acacore.utils.log import setup_logger
 from click import argument
+from click import BadParameter
 from click import command
 from click import Context
 from click import option
@@ -30,39 +33,11 @@ from .processor import find_processor
 from .processor import Processor
 
 
-def handle_start(ctx: Context, database: FileDB, *loggers: Logger):
-    program_start: HistoryEntry = HistoryEntry.command_history(
-        ctx,
-        "start",
-        data={"acacore": __acacore_version__},
-        add_params_to_data=True,
-    )
-
-    database.history.insert(program_start)
-
-    program_start.log(INFO, *loggers)
-
-
-def handle_end(ctx: Context, database: FileDB, exception: ExceptionManager, *loggers: Logger, commit: bool = True):
-    program_end: HistoryEntry = HistoryEntry.command_history(
-        ctx,
-        "end",
-        data=repr(exception.exception) if exception.exception else None,
-        reason="".join(format_tb(exception.traceback)) if exception.traceback else None,
-    )
-
-    program_end.log(ERROR if exception.exception else INFO, *loggers)
-
-    if database.is_open and commit:
-        database.history.insert(program_end)
-        database.commit()
-
-
 def file_not_found_error(
-    ctx: Context,
-    file_type: str,
-    path: str | PathLike,
-    uuid: UUID | None,
+        ctx: Context,
+        file_type: str,
+        path: str | PathLike,
+        uuid: UUID | None,
 ) -> HistoryEntry:
     return HistoryEntry.command_history(ctx, f"file.{file_type}:error", uuid, None, f"{path} not found")
 
@@ -99,10 +74,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
     database_path: Path = root / "_metadata" / "files.db"
 
     if not database_path.is_file():
-        raise FileNotFoundError(database_path)
+        raise BadParameter(f"No _metadata/files.db present in {root!r}.", ctx, ctx_params(ctx)["root"])
 
-    if not avid.is_file():
-        raise FileNotFoundError(avid)
+    check_database_version(ctx, ctx_params(ctx)["root"], database_path)
 
     program_name: str = ctx.find_root().command.name
     logger: Logger = setup_logger(program_name, files=[database_path.parent / f"{program_name}.log"], streams=[stdout])
@@ -113,7 +87,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
         processor: Processor = processor_cls(avid_conn)
 
         with FileDB(database_path) as db:
-            handle_start(ctx, db, logger)
+            log_file, log_stdout, _ = start_program(ctx, db, __version__, None, not dry_run, True, dry_run)
 
             with ExceptionManager() as exception:
                 for main_file_orig in processor.find_main_files():
@@ -163,7 +137,10 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                                 aux_files = []
                                 break
                         else:
-                            aux_file_copy = aux_file.model_copy(update={"uuid": uuid4(), "relative_path": new_path}, deep=True)
+                            aux_file_copy = aux_file.model_copy(
+                                update={"uuid": uuid4(), "relative_path": new_path},
+                                deep=True
+                            )
                             if (p := aux_file_copy.get_absolute_path(root)).exists():
                                 HistoryEntry.command_history(ctx, "file.aux:error", reason=f"{p} already exists").log(
                                     ERROR, logger
@@ -197,4 +174,4 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                             aux_file_copy.get_absolute_path(root).unlink(missing_ok=True)
                             raise
 
-            handle_end(ctx, db, exception, logger, commit=not dry_run)
+            end_program(ctx, db, exception, dry_run, log_file, log_stdout)
