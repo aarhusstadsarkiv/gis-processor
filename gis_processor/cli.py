@@ -1,22 +1,35 @@
-from logging import ERROR, INFO, Logger
+from logging import ERROR
+from logging import INFO
+from logging import Logger
 from os import PathLike
 from pathlib import Path
 from shutil import copy
 from sqlite3 import connect
 from sys import stdout
-from uuid import UUID, uuid4
+from uuid import UUID
+from uuid import uuid4
 
 from acacore.database import FileDB
 from acacore.models.file import File
 from acacore.models.history import HistoryEntry
 from acacore.models.reference_files import IgnoreAction
-from acacore.utils.click import check_database_version, ctx_params, end_program, start_program
+from acacore.utils.click import check_database_version
+from acacore.utils.click import ctx_params
+from acacore.utils.click import end_program
+from acacore.utils.click import start_program
 from acacore.utils.helpers import ExceptionManager
-from click import BadParameter, Context, argument, command, option, pass_context, version_option
+from click import argument
+from click import BadParameter
+from click import command
+from click import Context
+from click import option
+from click import pass_context
 from click import Path as ClickPath
+from click import version_option
 
 from .__version__ import __version__
-from .processor import Processor, find_processor
+from .processor import find_processor
+from .processor import Processor
 
 
 def file_not_found_error(
@@ -93,9 +106,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         aux_file: File | None = get_file(db, p := processor.file_to_path(aux_file_orig))
 
                         if not aux_file:
-                            HistoryEntry.command_history(
-                                ctx, f"file.aux:error", None, p, "Not in database"
-                            ).log(ERROR, log_stdout)
+                            HistoryEntry.command_history(ctx, f"file.aux:error", None, p, "Not in database").log(
+                                ERROR, log_stdout
+                            )
                             aux_files = []
                             break
                         elif not (p := aux_file.get_absolute_path(root)).exists():
@@ -108,9 +121,7 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         new_path: Path = main_file.relative_path.with_name(aux_file.name)
                         aux_file.lock = True
                         aux_file.action = "ignore"
-                        aux_file.action_data.ignore = IgnoreAction(
-                            template="text", reason=f"Moved to {new_path}"
-                        )
+                        aux_file.action_data.ignore = IgnoreAction(template="text", reason=f"Moved to {new_path}")
 
                         aux_file_copy: File
 
@@ -126,9 +137,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                                 update={"uuid": uuid4(), "relative_path": new_path}, deep=True
                             )
                             if (p := aux_file_copy.get_absolute_path(root)).exists():
-                                HistoryEntry.command_history(
-                                    ctx, "file.aux:error", reason=f"{p} already exists"
-                                ).log(ERROR, log_stdout)
+                                HistoryEntry.command_history(ctx, "file.aux:error", reason=f"{p} already exists").log(
+                                    ERROR, log_stdout
+                                )
                                 aux_files = []
                                 break
 
