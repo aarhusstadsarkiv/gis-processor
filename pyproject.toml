@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "gis-processor"
-version = "1.0.8"
+version = "1.0.9"
 description = "Find and gather related gis-files"
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 include = ["pyproject.toml"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v3.0.11"}
+acacore = {git = "https://github.com/aarhusstadsarkiv/acacore.git", tag = "v3.1.0"}
 
 [tool.poetry.scripts]
 gis-processor = "gis_processor.cli:app"
@@ -19,34 +19,31 @@ ruff = "^0.4.6"
 coverage = "^7.5.3"
 types-click = "^7.1.8"
 
-[tool.black]
+[tool.ruff]
 line-length = 120
 
-[tool.mypy-convertool.'*']
-disallow_untyped_defs = true
+[tool.ruff.format]
+line-ending = "lf"
 
-[tool.mypy-.venv.'*']
-ignore_errors = true
-
-[tool.ruff]
+[tool.ruff.lint]
 select = [
     "C",
     "E",
     "F",
     "W",
-   # "B", #TODO: Introduce this check. Will ask for some refactoring of error handling
+    # "B", Will ask for some refactoring of error handling
     "I",
-   # "C90", Checks for complexity, might be good but not essential
-   # "N", #TODO: Introduce this check. Will force us to redo the naming of several functions
+    # "C90", Checks for complexity, might be good but not essential
+    # "N", Will force us to redo the naming of several functions
     "D",
     "UP",
     "YTT",
     "ANN",
-   # "S", #TODO: Introduce this check. Will help us have secure calls to sub.process and such
+    # "S", Will help us have secure calls to sub.process and such, might be good
     "BLE",
-   # "FBT", #TODO: Introduce this check. Will asks us to remove boolean flags
+    # "FBT", Will asks us to remove boolean flags
     "A",
-    "COM",
+    # "COM",
     "C4",
     "DTZ",
     "T10",
@@ -61,49 +58,53 @@ select = [
     "TID",
     "ARG",
     "PLE",
-   # "PLR", #TODO: Introduce this check. Will suggest several large refactoring
+    # "PLR", Will suggest several large refactoring
     "PLW",
-   # "TRY", #TODO: Introduce this check. Will help with our exception handling
-    "RUF"
-    ]
+    # "TRY", Will help with our exception handling
+    "RUF",
+]
 ignore = [
-    "ANN002", # missing type anottation for *args
-    "ANN003", # missing type anotation for **kwargs
-    "ANN101", # missing type for self
-    "ANN102", # missing type for cls
-    "ANN201", # missing return type
-    "ANN202", # missing return type
-    "ANN206", # missing return type
-    "ARG001", # missing type anotattion for args
-    "BLE001", # catching general exceptions
-    "D100", # missing docstring
-    "D101", # missing docstring
-    "D102", # missing docstring
-    "D103", # missing docstring,
-    "D104", # missing docstring,
-    "D105", # missing docstring in magic method,
-    "D106", # missing docstring in nested class,
-    "D107", # missing docstring in __init__,
-    "D203", # 0 blank line required before class docstring,
-    "D204", # 1 blank line required after class docstring,
-    "D212", # multi-line docstring summary should start at the first line,
-    "D213", # multi-line docstring summary should start at the second line,
-    "D300", # use triple docstring
-    "E712", # comparison to True/False, we ignore because we use sqlalchemy
-    "FBT001", # boolean arguement in function definition
-    "N802", # name of function should be lower case
+    "ANN002",  # missing type anottation for *args
+    "ANN003",  # missing type anotation for **kwargs
+    "ANN101",  # missing type for self
+    "ANN102",  # missing type for cls
+    "ANN201",  # missing return type
+    "ANN202",  # missing return type
+    "ANN206",  # missing return type
+    "ARG001",  # missing type anotattion for args
+    "BLE001",  # catching general exceptions
+    "C901",    # complexity check
+    "D100",    # missing docstring
+    "D101",    # missing docstring
+    "D102",    # missing docstring
+    "D103",    # missing docstring,
+    "D104",    # missing docstring,
+    "D105",    # missing docstring in magic method,
+    "D106",    # missing docstring in nested class,
+    "D107",    # missing docstring in __init__,
+    "D203",    # 0 blank line required before class docstring,
+    "D204",    # 1 blank line required after class docstring,
+    "D212",    # multi-line docstring summary should start at the first line,
+    "D213",    # multi-line docstring summary should start at the second line,
+    "D300",    # use triple docstring
+    "D401",    # first line of docstring should be in imperative mood
+    "DTZ005",  # datetime.datetime.now() called without a tz argument
+    "DTZ006",  # datetime.datetime.fromtimestamp() called without a tz argument
+    "E501",    # line to long, to many false positives, gets handled by black
+    "E712",    # comparison to True/False, we ignore because we use sqlalchemy
+    "FBT001",  # boolean arguement in function definition
+    "INP001",  # implicit namespace without __init__ (throws errors in tests)
+    "ISC001",  # check for implicit concatanation of str on one line, not compatabil with black.
+    "N802",    # name of function should be lowercase
     "PLR2004", # magic value used in comparison
-    "PT012", # ptest.raises should contain a simple statement
-    "RET505", # unnecessary {branch} after return statement
-    "S101", # use of assert,
-    "TRY003", # avoid using long messages outside exception class
-    "UP007", # not using | in type anotations
-    "INP001", # implicit namespace without __init__ (throws errors in tests)
     "PLW2901", # redefing loop variables
-    "C901", # complexity check
-    "ISC001", # check for implicit concatanation of str on one line, not compatabil with black.
-    ]
-line-length = 110
+    "PT012",   # ptest.raises should contain a simple statement
+    "RET505",  # unnecessary {branch} after return statement
+    "S101",    # use of assert,
+    "SIM114",  # combine `if` branches using logical `or` operator
+    "TRY003",  # avoid using long messages outside exception class
+    "UP007",   # not using | in type anotations
+]
 exclude = [
     ".venv",
     "env",
@@ -113,12 +114,20 @@ exclude = [
     ".github",
     ".mypy_cache",
     ".pytest_cache",
-    ]
+    "__init__.py"
+]
 
+[tool.ruff.lint.isort]
+combine-as-imports = false
+force-single-line = true
+order-by-type = false
 
-[tool.ruff.pydocstyle]
-convention = "google"
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 ignore-decorators = ["pytest.fixture"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 300
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
