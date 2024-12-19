@@ -7,9 +7,9 @@ from sqlite3 import connect
 from uuid import UUID
 from uuid import uuid4
 
-from acacore.database import FileDB
-from acacore.models.file import File
-from acacore.models.history import HistoryEntry
+from acacore.database import FilesDB
+from acacore.models.event import Event
+from acacore.models.file import OriginalFile
 from acacore.models.reference_files import IgnoreAction
 from acacore.utils.click import check_database_version
 from acacore.utils.click import ctx_params
@@ -35,16 +35,12 @@ def file_not_found_error(
     file_type: str,
     path: str | PathLike,
     uuid: UUID | None,
-) -> HistoryEntry:
-    return HistoryEntry.command_history(ctx, f"file.{file_type}:error", uuid, None, f"{path} not found")
+) -> Event:
+    return Event.from_command(ctx, f"file.{file_type}:error", (uuid, "original"), None, f"{path} not found")
 
 
-def get_file(db: FileDB, path: str | PathLike) -> File | None:
-    return db.files.select(
-        where="relative_path = ?",
-        parameters=[str(Path(path))],
-        limit=1,
-    ).fetchone()
+def relative_path(root: Path, original_documents: Path, path: str | PathLike) -> Path:
+    return original_documents.joinpath(path).relative_to(root)
 
 
 @command("gis-processor")
@@ -68,10 +64,13 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
     """
 
     root, avid = Path(root), Path(avid)
-    database_path: Path = root / "_metadata" / "files.db"
+    database_path: Path = root / "_metadata" / "avid.db"
+    original_documents: Path = root / "OriginalDocuments"
 
     if not database_path.is_file():
-        raise BadParameter(f"No _metadata/files.db present in {root!r}.", ctx, ctx_params(ctx)["root"])
+        raise BadParameter(f"No _metadata/avid.db present in {root!r}.", ctx, ctx_params(ctx)["root"])
+    if not original_documents.is_dir():
+        raise BadParameter(f"No OriginalDocuments present in {root!r}.", ctx, ctx_params(ctx)["root"])
 
     check_database_version(ctx, ctx_params(ctx)["root"], database_path)
 
@@ -80,39 +79,64 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
             raise ValueError(f"{avid!r} is not recognised")
         processor: Processor = processor_cls(avid_conn)
 
-        with FileDB(database_path) as db:
+        with FilesDB(database_path) as db:
             log_file, log_stdout, _ = start_program(ctx, db, __version__, None, not dry_run, True, dry_run)
 
             with ExceptionManager() as exception:
                 for main_file_orig in processor.find_main_files():
-                    main_file: File | None = get_file(db, p := processor.file_to_path(main_file_orig))
-
-                    if not main_file:
-                        HistoryEntry.command_history(ctx, f"file.main:error", None, p, "Not in database").log(
-                            ERROR, log_stdout
+                    main_file_path: Path = relative_path(
+                        root,
+                        original_documents,
+                        processor.file_to_path(main_file_orig),
+                    )
+                    if not root.joinpath(main_file_path).is_file():
+                        Event.from_command(ctx, f"file.main:error", reason="File does not exists").log(
+                            ERROR,
+                            log_stdout,
+                            path=str(main_file_path),
                         )
                         continue
-                    elif not (p := main_file.get_absolute_path(root)).exists():
-                        HistoryEntry.command_history(
-                            ctx, f"file.main:error", main_file.uuid, p, "File does not exists"
-                        ).log(ERROR, log_stdout)
+
+                    main_file: OriginalFile | None = db.original_files[{"relative_path": str(main_file_path)}]
+
+                    if not main_file:
+                        Event.from_command(ctx, f"file.main:error", reason="Not in database").log(
+                            ERROR,
+                            log_stdout,
+                            path=str(main_file_path),
+                        )
                         continue
 
-                    aux_files: list[tuple[File, File]] = []
+                    aux_files: list[tuple[OriginalFile, OriginalFile]] = []
 
                     for aux_file_orig in processor.find_auxiliary_files(main_file_orig):
-                        aux_file: File | None = get_file(db, p := processor.file_to_path(aux_file_orig))
+                        aux_file_path: Path = relative_path(
+                            root,
+                            original_documents,
+                            processor.file_to_path(aux_file_orig),
+                        )
 
-                        if not aux_file:
-                            HistoryEntry.command_history(ctx, f"file.aux:error", None, p, "Not in database").log(
-                                ERROR, log_stdout
-                            )
+                        if not root.joinpath(aux_file_path).is_file():
+                            Event.from_command(
+                                ctx,
+                                f"file.aux:error",
+                                reason="File does not exists",
+                            ).log(ERROR, log_stdout)
                             aux_files = []
                             break
-                        elif not (p := aux_file.get_absolute_path(root)).exists():
-                            HistoryEntry.command_history(
-                                ctx, f"file.aux:error", aux_file.uuid, p, "File does not exists"
-                            ).log(ERROR, log_stdout)
+
+                        aux_file: OriginalFile | None = db.original_files[{"relative_path": str(aux_file_path)}]
+
+                        if not aux_file:
+                            Event.from_command(
+                                ctx,
+                                f"file.aux:error",
+                                reason="Not in database",
+                            ).log(
+                                ERROR,
+                                log_stdout,
+                                path=str(aux_file_path),
+                            )
                             aux_files = []
                             break
 
@@ -121,35 +145,40 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                         aux_file.action = "ignore"
                         aux_file.action_data.ignore = IgnoreAction(template="text", reason=f"Moved to {new_path}")
 
-                        aux_file_copy: File
+                        aux_file_copy: OriginalFile
 
-                        if aux_file_copy := get_file(db, new_path):
+                        if aux_file_copy := db.original_files[{"relative_path": str(new_path)}]:
                             if aux_file_copy.checksum != aux_file.checksum:
-                                HistoryEntry.command_history(
-                                    ctx, "file.aux:error", reason=f"{p} already exists with different hash"
-                                ).log(ERROR, log_stdout)
+                                Event.from_command(
+                                    ctx,
+                                    "file.aux:error",
+                                    reason="File already exists with different hash",
+                                ).log(ERROR, log_stdout, path=str(new_path))
                                 aux_files = []
                                 break
+                        elif root.joinpath(new_path).is_file():
+                            Event.from_command(ctx, "file.aux:error", reason="File already exists").log(
+                                ERROR,
+                                log_stdout,
+                                path=str(new_path),
+                            )
+                            aux_files = []
+                            break
                         else:
                             aux_file_copy = aux_file.model_copy(
-                                update={"uuid": uuid4(), "relative_path": new_path}, deep=True
+                                update={"uuid": uuid4(), "relative_path": new_path},
+                                deep=True,
                             )
-                            if (p := aux_file_copy.get_absolute_path(root)).exists():
-                                HistoryEntry.command_history(ctx, "file.aux:error", reason=f"{p} already exists").log(
-                                    ERROR, log_stdout
-                                )
-                                aux_files = []
-                                break
 
                         aux_file_copy.action = "ignore"
                         aux_file_copy.action_data.ignore = IgnoreAction(template="temporary-file")
                         aux_files.append((aux_file, aux_file_copy))
 
                     for aux_file, aux_file_copy in aux_files:
-                        event = HistoryEntry.command_history(
+                        event = Event.from_command(
                             ctx,
                             "file.aux:copy",
-                            aux_file_copy.uuid,
+                            (aux_file_copy.uuid, "original"),
                             [str(aux_file.relative_path), str(aux_file_copy.relative_path)],
                         )
 
@@ -160,9 +189,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
                         try:
                             copy(aux_file.get_absolute_path(root), aux_file_copy.get_absolute_path(root))
-                            db.files.insert(aux_file_copy, replace=True)
-                            db.files.update(aux_file)
-                            db.history.insert(event)
+                            db.original_files.insert(aux_file_copy, on_exists="replace")
+                            db.original_files.update(aux_file)
+                            db.log.insert(event)
                         except BaseException:
                             aux_file_copy.get_absolute_path(root).unlink(missing_ok=True)
                             raise
