@@ -4,7 +4,6 @@ from os import PathLike
 from pathlib import Path
 from shutil import copy
 from sqlite3 import connect
-from uuid import UUID
 from uuid import uuid4
 
 from acacore.database import FilesDB
@@ -28,19 +27,6 @@ from click import version_option
 from .__version__ import __version__
 from .processor import find_processor
 from .processor import Processor
-
-
-def file_not_found_error(
-    ctx: Context,
-    file_type: str,
-    path: str | PathLike,
-    uuid: UUID | None,
-) -> Event:
-    return Event.from_command(ctx, f"file.{file_type}:error", (uuid, "original"), None, f"{path} not found")
-
-
-def relative_path(root: Path, original_documents: Path, path: str | PathLike) -> Path:
-    return original_documents.joinpath(path).relative_to(root)
 
 
 @command("gis-processor")
@@ -84,11 +70,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
 
             with ExceptionManager() as exception:
                 for main_file_orig in processor.find_main_files():
-                    main_file_path: Path = relative_path(
-                        root,
-                        original_documents,
-                        processor.file_to_path(main_file_orig),
-                    )
+                    main_file_path: Path = original_documents.joinpath(
+                        processor.file_to_path(main_file_orig)
+                    ).relative_to(root)
                     if not root.joinpath(main_file_path).is_file():
                         Event.from_command(ctx, f"file.main:error", reason="File does not exists").log(
                             ERROR,
@@ -110,11 +94,9 @@ def app(ctx: Context, root: str | PathLike, avid: str | PathLike, dry_run: bool)
                     aux_files: list[tuple[OriginalFile, OriginalFile]] = []
 
                     for aux_file_orig in processor.find_auxiliary_files(main_file_orig):
-                        aux_file_path: Path = relative_path(
-                            root,
-                            original_documents,
-                            processor.file_to_path(aux_file_orig),
-                        )
+                        aux_file_path: Path = original_documents.joinpath(
+                            processor.file_to_path(aux_file_orig)
+                        ).relative_to(root)
 
                         if not root.joinpath(aux_file_path).is_file():
                             Event.from_command(
